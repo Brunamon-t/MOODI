@@ -5,6 +5,9 @@ import {
   AlertCircle, RefreshCw, WifiOff
 } from 'lucide-react';
 
+
+import './App.css';
+
 /**
  * 🔗 LINK OFICIAL DO RENDER
  * Verifica se este URL é exatamente o que aparece no teu Dashboard do Render.
