@@ -1,26 +1,33 @@
 require('dotenv').config();
 const { Pool } = require('pg');
 
+// Detetar se estamos no Render (produção) ou no vosso PC (local)
 const isProduction = process.env.NODE_ENV === 'production';
 
-// Na nuvem (Render/Neon), usamos DATABASE_URL.
-// Localmente, usamos as variáveis separadas (DB_USER, etc.)
-const connectionString = process.env.DATABASE_URL 
-  ? process.env.DATABASE_URL 
-  : `postgresql://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_DATABASE}`;
+// O link que copiaram do Neon
+const connectionString = process.env.DATABASE_URL;
+
+if (isProduction && !connectionString) {
+  console.error('❌ ERRO: A variável DATABASE_URL não foi encontrada no Render!');
+}
 
 const pool = new Pool({
   connectionString: connectionString,
-  // O Neon exige SSL. rejectUnauthorized: false é necessário para ambientes cloud gratuitos.
-  ssl: isProduction ? { rejectUnauthorized: false } : false
+  // CONFIGURAÇÃO CRÍTICA PARA O NEON:
+  // Em produção, forçamos o SSL e aceitamos certificados da cloud (rejectUnauthorized: false)
+  ssl: isProduction ? { 
+    rejectUnauthorized: false 
+  } : false
 });
 
-// Teste de ligação inicial
-pool.query('SELECT NOW()', (err, res) => {
+// Teste de ligação com diagnóstico detalhado
+pool.connect((err, client, release) => {
   if (err) {
-    console.error('❌ Erro crítico na ligação à BD:', err.message);
+    console.error('❌ FALHA DE LIGAÇÃO À BD:', err.stack);
+    console.error('Verifiquem se o link do Neon no Render está correto e não tem espaços.');
   } else {
-    console.log('✅ Ligação ao Neon estabelecida com sucesso!');
+    console.log('✅ SUCESSO TOTAL: API ligada ao Neon PostgreSQL!');
+    release();
   }
 });
 
