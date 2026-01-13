@@ -51,7 +51,12 @@ export default function App() {
     e.preventDefault();
     setError(null);
     try {
+      /**
+       * 🛠️ AJUSTE: Enviamos o id_externo_auth explicitamente para evitar erros de validação
+       * O backend espera que este campo exista para criar ou encontrar o utilizador.
+       */
       const res = await axios.post(`${API_URL}/auth/callback`, {
+        id_externo_auth: `manual_${email.split('@')[0]}`, 
         email,
         pseudonimo: email.split('@')[0]
       });
