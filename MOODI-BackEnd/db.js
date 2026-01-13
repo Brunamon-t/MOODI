@@ -1,32 +1,38 @@
 require('dotenv').config();
 const { Pool } = require('pg');
 
-// Detetar se estamos no Render (produção) ou no vosso PC (local)
+// Detetar se estamos no Render (produção) ou local
 const isProduction = process.env.NODE_ENV === 'production';
 
-// O link que copiaram do Neon
+// IMPORTANTE: Garantir que a DATABASE_URL do Render termina com ?sslmode=require
 const connectionString = process.env.DATABASE_URL;
-
-if (isProduction && !connectionString) {
-  console.error('❌ ERRO: A variável DATABASE_URL não foi encontrada no Render!');
-}
 
 const pool = new Pool({
   connectionString: connectionString,
-  // CONFIGURAÇÃO CRÍTICA PARA O NEON:
-  // Em produção, forçamos o SSL e aceitamos certificados da cloud (rejectUnauthorized: false)
+  // Para o Neon, o SSL é obrigatório na nuvem
   ssl: isProduction ? { 
     rejectUnauthorized: false 
-  } : false
+  } : false,
+  // Boas práticas: timeout e limite de ligações
+  connectionTimeoutMillis: 5000,
+  max: 10 
 });
 
-// Teste de ligação com diagnóstico detalhado
+// Teste de Ligação com Log Detalhado
 pool.connect((err, client, release) => {
   if (err) {
-    console.error('❌ FALHA DE LIGAÇÃO À BD:', err.stack);
-    console.error('Verifiquem se o link do Neon no Render está correto e não tem espaços.');
+    console.error('❌ ERRO CRÍTICO NA BASE DE DADOS:');
+    console.error('Mensagem:', err.message);
+    console.error('Código do Erro:', err.code);
+    
+    if (err.message.includes('no pg_hba.conf entry')) {
+      console.error('👉 DICA: Adicionem "?sslmode=require" ao fim do DATABASE_URL no Render.');
+    }
+    if (err.message.includes('relation "utilizador" does not exist')) {
+      console.error('👉 DICA: Têm de correr o ficheiro Tables.sql no SQL Editor do Neon!');
+    }
   } else {
-    console.log('✅ SUCESSO TOTAL: API ligada ao Neon PostgreSQL!');
+    console.log('✅ CONEXÃO ESTABELECIDA: O Backend está a comunicar com o Neon!');
     release();
   }
 });
