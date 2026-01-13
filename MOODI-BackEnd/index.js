@@ -13,7 +13,7 @@ const app = express();
  * Usar cors() sem parâmetros permite que QUALQUER site (incluindo a Vercel)
  * consiga falar com esta API. É o ideal para resolver erros de rede.
  */
-app.use(cors()); 
+app.use(cors({origin: `*`})); 
 app.use(express.json()); 
 
 // Configuração da porta para o Render
