@@ -1,20 +1,27 @@
-// Importa o 'dotenv' para carregar as variáveis do .env
-// Isto faz com que o process.env consiga ler o vosso ficheiro .env
 require('dotenv').config();
-
-// Importa a classe 'Pool' do pacote 'pg'
 const { Pool } = require('pg');
 
-// Cria o "pool" de ligações.
-// Um pool é mais eficiente do que uma ligação única.
+const isProduction = process.env.NODE_ENV === 'production';
+
+// Na nuvem (Render/Neon), usamos DATABASE_URL.
+// Localmente, usamos as variáveis separadas (DB_USER, etc.)
+const connectionString = process.env.DATABASE_URL 
+  ? process.env.DATABASE_URL 
+  : `postgresql://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_DATABASE}`;
+
 const pool = new Pool({
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  host: process.env.DB_HOST,
-  port: process.env.DB_PORT,
-  database: process.env.DB_DATABASE,
+  connectionString: connectionString,
+  // O Neon exige SSL. rejectUnauthorized: false é necessário para ambientes cloud gratuitos.
+  ssl: isProduction ? { rejectUnauthorized: false } : false
 });
 
-// Exporta o pool para que o resto da vossa API (o index.js)
-// o possa usar para fazer queries.
+// Teste de ligação inicial
+pool.query('SELECT NOW()', (err, res) => {
+  if (err) {
+    console.error('❌ Erro crítico na ligação à BD:', err.message);
+  } else {
+    console.log('✅ Ligação ao Neon estabelecida com sucesso!');
+  }
+});
+
 module.exports = pool;
