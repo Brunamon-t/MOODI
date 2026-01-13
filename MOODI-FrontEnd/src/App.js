@@ -10,7 +10,7 @@ import {
  * 🔗 LIGAÇÃO À API
  * Este link aponta para o vosso Backend no Render que já está Live.
  */
-const API_URL = 'https://moodi-api.onrender.com'; 
+const API_URL = '[https://moodi-nnkb.onrender.com](https://moodi-nnkb.onrender.com)'; 
 
 export default function App() {
   // --- ESTADOS ---
