@@ -7,8 +7,7 @@ import {
 
 /**
  * 🔗 LINK OFICIAL DO RENDER
- * Removi o 'Sparkles' e outros ícones não utilizados que bloqueavam o deploy.
- * O Netlify trata avisos (warnings) como erros se não forem limpos.
+ * Verifica se este URL é exatamente o que aparece no teu Dashboard do Render.
  */
 const API_URL = 'https://moodi-nnkb.onrender.com'; 
 
@@ -28,11 +27,12 @@ export default function App() {
   useEffect(() => {
     const pingServer = async () => {
       try {
+        // Tentamos aceder ao status para ver se a API responde
         await axios.get(`${API_URL}/api/sugestoes`, { timeout: 15000 });
         setIsWakingUp(false);
       } catch (err) {
         setIsWakingUp(true);
-        console.warn("Servidor a acordar no Render...");
+        console.warn("A aguardar resposta do Render...");
       }
     };
     pingServer();
@@ -58,8 +58,15 @@ export default function App() {
       setUser(res.data.user);
       setPage('dashboard');
     } catch (err) {
-      console.error("Erro no login:", err);
-      setError("Erro de rede: O servidor não respondeu. Verifica se o Render está 'Live'.");
+      console.error("Erro detalhado no login:", err);
+      // Diagnóstico inteligente do erro
+      if (err.message === "Network Error") {
+        setError("Erro de Rede: O browser não consegue chegar à API. Verifica o HTTPS ou se o CORS está ativo no Backend.");
+      } else if (err.response?.status === 500) {
+        setError("Erro 500: O servidor Render está vivo, mas não consegue ligar-se à Base de Dados (Neon).");
+      } else {
+        setError(`Erro: ${err.response?.data?.error || err.message}`);
+      }
     }
   };
 
@@ -75,12 +82,10 @@ export default function App() {
       });
       setText('');
       setSelectedEmoji(null);
-      // Atualiza o histórico após o envio
       const hRes = await axios.get(`${API_URL}/journal/${user.id_utilizador}`);
       setHistory(hRes.data);
     } catch (err) {
-      console.error("Erro ao guardar:", err);
-      setError("Erro ao guardar o registo. Tenta novamente.");
+      setError("Falha ao guardar: " + (err.response?.data?.error || err.message));
     } finally {
       setIsAnalyzing(false);
     }
@@ -94,13 +99,14 @@ export default function App() {
           <h1 className="text-4xl font-black text-slate-800 mb-2">Moodi</h1>
           
           {isWakingUp && (
-            <div className="mt-4 bg-amber-50 text-amber-700 p-4 rounded-2xl flex items-center gap-2 animate-pulse text-xs">
-              <WifiOff size={16}/> O servidor está a acordar (pode demorar 1 min)...
+            <div className="mt-4 bg-amber-50 text-amber-700 p-4 rounded-2xl flex items-center gap-2 animate-pulse text-xs text-left">
+              <WifiOff size={16} className="shrink-0"/> 
+              <span>O servidor gratuito do Render demora cerca de 50s a "acordar". Aguarda um momento...</span>
             </div>
           )}
 
           {error && (
-            <div className="mt-4 bg-red-50 text-red-600 p-4 rounded-2xl text-xs flex items-center gap-2 text-left">
+            <div className="mt-4 bg-red-50 text-red-600 p-4 rounded-2xl text-xs flex items-center gap-2 text-left border border-red-100">
               <AlertCircle size={16} className="shrink-0"/> {error}
             </div>
           )}
@@ -118,6 +124,10 @@ export default function App() {
               Entrar no Diário
             </button>
           </form>
+          
+          <p className="mt-6 text-[10px] text-slate-300 uppercase tracking-widest">
+            API: {API_URL}
+          </p>
         </div>
       </div>
     );
