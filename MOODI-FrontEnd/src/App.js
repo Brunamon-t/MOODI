@@ -8,9 +8,9 @@ import {
 
 /**
  * 🔗 LIGAÇÃO À API
- * Link do vosso Render (sem aspas extras e com https)
+ * Este link aponta para o vosso Backend no Render que já está Live.
  */
-const API_URL = 'https://moodi-nnkb.onrender.com'; 
+const API_URL = 'https://moodi-api.onrender.com'; 
 
 export default function App() {
   // --- ESTADOS ---
@@ -19,6 +19,7 @@ export default function App() {
   const [email, setEmail] = useState('aluno@ipmaia.pt');
   const [error, setError] = useState(null);
   const [isServerOffline, setIsServerOffline] = useState(false);
+  const [isWakingUp, setIsWakingUp] = useState(false);
   
   const [text, setText] = useState('');
   const [selectedEmojis, setSelectedEmojis] = useState([]);
@@ -30,31 +31,30 @@ export default function App() {
 
   // --- CARREGAMENTO DE DADOS ---
   
-  // 1. Carregar Biblioteca de Sugestões e verificar estado do servidor
   useEffect(() => {
     const checkConnection = async () => {
+      setIsWakingUp(true);
       try {
-        const res = await axios.get(`${API_URL}/api/sugestoes`, { timeout: 10000 });
+        const res = await axios.get(`${API_URL}/api/sugestoes`, { timeout: 30000 });
         setSuggestions(res.data);
         setIsServerOffline(false);
+        setIsWakingUp(false);
         setError(null);
       } catch (err) {
         console.error("Erro ao carregar biblioteca:", err);
         setIsServerOffline(true);
-        setError("O servidor parece estar offline ou ainda está a arrancar no Render.");
+        setIsWakingUp(false);
+        setError("O servidor está a demorar a responder. Tenta atualizar a página daqui a 30 segundos.");
       }
     };
     checkConnection();
   }, []);
 
-  // 2. Carregar Histórico do Utilizador
   useEffect(() => {
     if (user) {
       axios.get(`${API_URL}/journal/${user.id_utilizador}`)
         .then(res => setUserHistory(res.data))
-        .catch(err => {
-          console.error("Erro ao carregar histórico:", err);
-        });
+        .catch(err => console.error("Erro ao carregar histórico:", err));
     }
   }, [user]);
 
@@ -73,8 +73,7 @@ export default function App() {
       setIsServerOffline(false);
     } catch (err) {
       console.error("Erro no login:", err);
-      setIsServerOffline(true);
-      setError("Sem resposta do servidor. Verifica se o backend no Render está 'Live'.");
+      setError("Erro ao entrar. Verifica se o backend no Render está 'Live'.");
     }
   };
 
@@ -89,7 +88,7 @@ export default function App() {
     try {
       const res = await axios.post(`${API_URL}/journal`, {
         fk_utilizador: user.id_utilizador,
-        emoji_selecionado: selectedEmojis,
+        emoji_selecionado: setSelectedEmojis,
         texto_livre: text
       });
       
@@ -97,12 +96,11 @@ export default function App() {
       setText('');
       setSelectedEmojis([]);
       
-      // Atualizar histórico após novo registo
       const hRes = await axios.get(`${API_URL}/journal/${user.id_utilizador}`);
       setUserHistory(hRes.data);
     } catch (err) {
       console.error("Erro na análise:", err);
-      setError("Erro na análise. O servidor pode estar ocupado.");
+      setError("A análise falhou. O servidor pode estar ocupado.");
     } finally {
       setIsAnalyzing(false);
     }
@@ -114,8 +112,8 @@ export default function App() {
     <div className="bg-amber-50 border-l-4 border-amber-500 p-4 mb-6 rounded-r-2xl flex items-center gap-3 animate-pulse">
       <WifiOff className="text-amber-600" />
       <div className="text-left">
-        <p className="text-amber-800 font-bold text-sm">Problema de Ligação</p>
-        <p className="text-amber-700 text-xs">A API não responde. O Render pode estar a "acordar" o servidor.</p>
+        <p className="text-amber-800 font-bold text-sm">Servidor em Standby</p>
+        <p className="text-amber-700 text-xs">O Render está a "acordar". Aguarda cerca de 40 segundos...</p>
       </div>
     </div>
   );
@@ -128,10 +126,11 @@ export default function App() {
             <Smile size={48} strokeWidth={2.5} />
           </div>
           <h1 className="text-4xl font-black text-slate-800 mb-2">Moodi</h1>
-          <p className="text-slate-400 mb-8 font-medium italic">O teu bem-estar na cloud.</p>
+          <p className="text-slate-400 mb-8 font-medium italic">O teu diário cloud-native.</p>
 
-          {isServerOffline && <ConnectionAlert />}
-          {error && !isServerOffline && (
+          {(isServerOffline || isWakingUp) && <ConnectionAlert />}
+          
+          {error && !isWakingUp && (
             <div className="bg-red-50 text-red-600 p-4 rounded-2xl mb-6 text-sm flex gap-2 items-center text-left">
               <AlertCircle size={16} className="shrink-0"/> {error}
             </div>
@@ -147,15 +146,17 @@ export default function App() {
               required
             />
             <button 
+              disabled={isWakingUp}
               className="w-full bg-indigo-600 text-white p-5 rounded-2xl font-bold text-lg hover:bg-indigo-700 hover:shadow-lg transition-all active:scale-95 disabled:bg-slate-300"
             >
-              Entrar no Diário
+              {isWakingUp ? "A aguardar API..." : "Entrar no Diário"}
             </button>
           </form>
           
-          <p className="mt-8 text-[10px] text-slate-300 uppercase tracking-widest font-mono">
-            API: {API_URL}
-          </p>
+          <div className="mt-8 pt-6 border-t border-slate-100">
+             <p className="text-[10px] text-slate-300 uppercase tracking-widest font-mono mb-1">Backend URL</p>
+             <p className="text-[9px] text-indigo-300 font-mono break-all">{API_URL}</p>
+          </div>
         </div>
       </div>
     );
