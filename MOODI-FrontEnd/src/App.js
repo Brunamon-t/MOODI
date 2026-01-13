@@ -4,8 +4,6 @@ import {
   Smile, Heart, Send, LogOut, 
   AlertCircle, RefreshCw, WifiOff
 } from 'lucide-react';
-
-
 import './App.css';
 
 /**
